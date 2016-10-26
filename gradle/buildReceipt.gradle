@@ -111,7 +111,7 @@ task configureBuildReceipt(dependsOn: determineCommitId) {
         createBuildReceipt.versionBase = rootProject.versionBase
         createBuildReceipt.snapshot = rootProject.isSnapshot
         createBuildReceipt.buildTimestamp = rootProject.buildTimestamp
-        createBuildReceipt.commitId = devBuild ? null : determineCommitId.commitId
+        createBuildReceipt.commitId = determineCommitId.commitId
     }
 }
 
