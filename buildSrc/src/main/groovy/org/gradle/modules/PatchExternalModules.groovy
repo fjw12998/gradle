@@ -20,8 +20,16 @@ import groovy.transform.CompileStatic
 import org.gradle.api.DefaultTask
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.file.CopySpec
+import org.gradle.api.file.FileCollection
 import org.gradle.api.internal.project.ProjectInternal
-import org.gradle.api.tasks.*
+import org.gradle.api.tasks.CacheableTask
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputFiles
+import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.TaskAction
 
 @CacheableTask
 @CompileStatic
@@ -35,13 +43,18 @@ class PatchExternalModules extends DefaultTask {
         externalModules.dependencies*.name as Set
     }
 
-    @PathSensitive(PathSensitivity.NAME_ONLY)
-    @InputFiles
+    @Internal
     Configuration externalModulesRuntime
 
-    @PathSensitive(PathSensitivity.NONE)
     @InputFiles
+    @PathSensitive(PathSensitivity.NONE)
     Configuration coreRuntime
+
+    @InputFiles
+    @PathSensitive(PathSensitivity.NAME_ONLY)
+    FileCollection getExternalModulesRuntimeWithoutCore() {
+        externalModulesRuntime - coreRuntime
+    }
 
     @OutputDirectory
     File destination
@@ -53,7 +66,7 @@ class PatchExternalModules extends DefaultTask {
     @TaskAction
     public void patch() {
         ((ProjectInternal) project).sync { CopySpec copySpec ->
-            copySpec.from(externalModulesRuntime - coreRuntime)
+            copySpec.from(externalModulesRuntimeWithoutCore)
             copySpec.into(destination)
         }
 
