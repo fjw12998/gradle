@@ -16,6 +16,7 @@
 
 evaluationDependsOn ":distributions"
 evaluationDependsOn ":docs"
+evaluationDependsOn ":versionInfo"
 
 task intTestImage(type: Sync) {
     into file("$buildDir/integ test")
@@ -32,11 +33,21 @@ if (useIncomingDistributions) {
 
     intTestImage {
         dependsOn unpackIncomingAllDistribution
-        from unpackedPath
+        from(unpackedPath) {
+            exclude "lib/gradle-version-info*.jar"
+        }
+        into("lib") {
+            from { project(':versionInfo').testVersionInfoJar }
+        }
     }
 } else {
     intTestImage {
-        with project(":distributions").binDistImage
+        with project(":distributions").binDistImage {
+            exclude "gradle-version-info*.jar"
+        }
+        into("lib") {
+            from { project(':versionInfo').testVersionInfoJar }
+        }
         into "samples", {
             from { project(":docs").outputs.samples }
         }

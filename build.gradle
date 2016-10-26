@@ -276,6 +276,7 @@ def patchedExternalModules = fileTree(patchedExternalModulesDir) {
 dependencies {
     externalModules 'org.gradle:gradle-script-kotlin:0.4.1'
     coreRuntime project(':launcher')
+    coreRuntime project(':versionInfo')
     runtime project(':wrapper')
     runtime project(":installationBeacon")
     runtime patchedExternalModules
@@ -322,7 +323,7 @@ evaluationDependsOn ":distributions"
 task install(type: Install) {
     description = 'Installs the minimal distribution into directory $gradle_installPath'
     group = 'build'
-    with project(":distributions").binDistImage
+    with project(":distributions").binDistImage()
     installDirPropertyName = 'gradle_installPath'
 }
 

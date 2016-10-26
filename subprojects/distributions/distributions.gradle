@@ -44,30 +44,32 @@ evaluationDependsOn ":docs"
 ext {
     zipRootFolder = "gradle-$version"
 
-    binDistImage = copySpec {
-        from("$rootDir/LICENSE")
-        from('src/toplevel') {
-            exclude 'media/**'
-            expand(version: version)
-        }
-        from('src/toplevel') {
-            include 'media/**'
-        }
-        from project(':docs').outputs.distDocs
-        into('bin') {
-            from { project(':launcher').startScripts.outputs.files }
-            fileMode = 0755
-        }
-        into('lib') {
-            from rootProject.configurations.runtime
-            into('plugins') {
-                from rootProject.configurations.gradlePlugins - rootProject.configurations.runtime
+    binDistImage = { Closure runtimeConf = {} ->
+        copySpec {
+            from("$rootDir/LICENSE")
+            from('src/toplevel') {
+                exclude 'media/**'
+                expand(version: version)
+            }
+            from('src/toplevel') {
+                include 'media/**'
+            }
+            from project(':docs').outputs.distDocs
+            into('bin') {
+                from { project(':launcher').startScripts.outputs.files }
+                fileMode = 0755
+            }
+            into('lib') {
+                from(rootProject.configurations.runtime, runtimeConf)
+                into('plugins') {
+                    from rootProject.configurations.gradlePlugins - rootProject.configurations.runtime
+                }
             }
         }
     }
 
     allDistImage = copySpec {
-        with binDistImage
+        with binDistImage()
         groovyProjects.each { project ->
             into("src/$project.projectDir.name") {
                 from project.sourceSets.main.allSource
@@ -92,7 +94,7 @@ task allZip(type: Zip) {
 task binZip(type: Zip) {
     classifier = 'bin'
     into(zipRootFolder) {
-        with binDistImage
+        with binDistImage()
     }
 }
 

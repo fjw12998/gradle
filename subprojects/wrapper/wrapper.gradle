@@ -26,18 +26,9 @@ dependencies {
     integTestRuntime rootProject.configurations.testRuntime.allDependencies
 }
 
-ext {
-    wrapperBuildReceipt = "build-receipt.properties"
-}
-
-task wrapperBuildReceiptResource() {
-    inputs.property 'version', { version }
-    outputs.file { "${generatedTestResourcesDir}/${wrapperBuildReceipt}" }
-    outputs.cacheIf { true }
-    doLast {
-        generatedTestResourcesDir.mkdirs()
-        new File(generatedTestResourcesDir, wrapperBuildReceipt).text = "versionNumber=${version}"
-    }
+task wrapperBuildReceiptResource(type: Copy) {
+    into generatedTestResourcesDir
+    from project(':versionInfo').createTestBuildReceipt
 }
 sourceSets.test.output.dir generatedTestResourcesDir, builtBy: wrapperBuildReceiptResource
 
