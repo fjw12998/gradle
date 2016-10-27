@@ -14,33 +14,32 @@
  * limitations under the License.
  */
 
-task buildReceiptResource(type: Copy, dependsOn: rootProject.createBuildReceipt) {
-    into "$generatedResourcesDir/org/gradle"
-    from rootProject.createBuildReceipt.receiptFile
-}
-
 configurations {
     testVersionInfo
 }
 
-sourceSets.main.output.dir generatedResourcesDir, builtBy: buildReceiptResource
-
 task createTestBuildReceipt(type: org.gradle.build.BuildReceipt) {
-    receiptFile = file("$buildDir/test-version-info-resources/org/gradle/build-receipt.properties")
+    receiptFile = file("$buildDir/test-version-info-resources/build-receipt.properties")
     versionNumber = rootProject.isSnapshot ? "${rootProject.versionBase}-snapshot-1" : rootProject.version
     versionBase = rootProject.versionBase
     snapshot = rootProject.isSnapshot
 }
 
+ext.buildReceiptPackage = '/org/gradle/'
+
 def libsDir = convention.getPlugin(BasePluginConvention).libsDir
 jar {
     destinationDir = file("${libsDir}/prod")
+    from(rootProject.createBuildReceipt) {
+        into buildReceiptPackage
+    }
 }
 
 task testVersionInfoJar(type: Jar) {
-    dependsOn createTestBuildReceipt
     destinationDir = file("${libsDir}/test")
-    from "${buildDir}/test-version-info-resources"
+    from(createTestBuildReceipt) {
+        into buildReceiptPackage
+    }
     from classpathManifest
 }
 
