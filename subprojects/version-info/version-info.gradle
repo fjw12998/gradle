@@ -14,13 +14,104 @@
  * limitations under the License.
  */
 
+import org.gradle.internal.os.OperatingSystem
+
 configurations {
     testVersionInfo
 }
 
+task determineCommitId {
+    ext.commitId = null
+
+    doLast {
+        def strategies = []
+
+        def env = System.getenv()
+
+        // For promotion builds use the commitId passed in as a project property
+        strategies << {
+            project.hasProperty('promotionCommitId') ? project.property('promotionCommitId') : null
+        }
+
+        // Builds of Gradle happening on the CI server
+        strategies << {
+            env["BUILD_VCS_NUMBER"]
+        }
+
+        // For the discovery builds, this points to the Gradle revision
+        strategies << {
+            env.find { it.key.startsWith("BUILD_VCS_NUMBER_Gradle_Master") }?.value
+        }
+
+        // For the discovery release builds, this points to the Gradle revision
+        strategies << {
+            env.find { it.key.startsWith("BUILD_VCS_NUMBER_Gradle_release_branch") }?.value
+        }
+
+        // If it's a checkout, ask Git for it
+        strategies << {
+            def gitDir = file("${rootDir}/.git")
+            if (gitDir.exists()) {
+                def baos = new ByteArrayOutputStream()
+                def execResult = exec {
+                    workingDir = rootDir
+                    ignoreExitValue = true
+                    commandLine = ["git", "log", "-1", "--format=%H"]
+                    if (OperatingSystem.current().windows) {
+                        commandLine = ["cmd", "/c"] + commandLine
+                    }
+
+                    standardOutput = baos
+                }
+                if (execResult.exitValue == 0) {
+                    new String(baos.toByteArray(), "utf8").trim()
+                } else if (file("${gitDir}/HEAD").exists()) {
+                    // Read commit id directly from filesystem
+                    def headRef = file("${gitDir}/HEAD").text
+                    headRef = headRef.replaceAll('ref: ', '').trim()
+                    file("${gitDir}/$headRef").text.trim()
+                }
+            } else {
+                null
+            }
+        }
+
+        // It's a source distribution, we don't know.
+        strategies << {
+            if (!file("design-docs").directory) {
+                "<unknown>"
+            }
+        }
+
+        for (strategy in strategies) {
+            commitId = strategy()
+            if (commitId) {
+                break
+            }
+        }
+        if (!commitId) {
+            throw new InvalidUserDataException("Could not determine commit id")
+        }
+    }
+}
+
+task configureBuildReceipt(dependsOn: determineCommitId) {
+    doLast {
+        createBuildReceipt.versionNumber = rootProject.version
+        createBuildReceipt.versionBase = rootProject.versionBase
+        createBuildReceipt.snapshot = rootProject.isSnapshot
+        createBuildReceipt.buildTimestamp = rootProject.buildTimestamp
+        createBuildReceipt.commitId = determineCommitId.commitId
+    }
+}
+
+task createBuildReceipt(type: org.gradle.build.BuildReceipt, dependsOn: configureBuildReceipt) {
+    receiptFile = file("${rootProject.buildDir}/$buildReceiptFileName")
+}
+
 task createTestBuildReceipt(type: org.gradle.build.BuildReceipt) {
-    receiptFile = file("$buildDir/test-version-info-resources/build-receipt.properties")
-    versionNumber = rootProject.isSnapshot ? "${rootProject.versionBase}-snapshot-1" : rootProject.version
+    receiptFile = file("$buildDir/test-version-info-resources/${buildReceiptFileName}")
+    versionNumber = rootProject.testedVersion
     versionBase = rootProject.versionBase
     snapshot = rootProject.isSnapshot
 }
@@ -30,7 +121,7 @@ ext.buildReceiptPackage = '/org/gradle/'
 def libsDir = convention.getPlugin(BasePluginConvention).libsDir
 jar {
     destinationDir = file("${libsDir}/prod")
-    from(rootProject.createBuildReceipt) {
+    from(createBuildReceipt) {
         into buildReceiptPackage
     }
 }

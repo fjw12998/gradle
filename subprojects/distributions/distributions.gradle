@@ -23,6 +23,7 @@ tasks.remove(jar)
 
 tasks.withType(AbstractArchiveTask) {
     baseName "gradle"
+    version = versionBase
 
     // The CI server looks for the distributions at this location
     destinationDir = rootProject.distsDir
@@ -121,9 +122,11 @@ task srcZip(type: Zip) {
     }
 }
 
+evaluationDependsOn(':versionInfo')
+
 task outputsZip(type: Zip) {
     archiveName "outputs.zip"
-    from rootProject.createBuildReceipt
+    from project(':versionInfo').createBuildReceipt
     ["all", "bin", "src"].each { from(tasks["${it}Zip"]) }
 }
 
