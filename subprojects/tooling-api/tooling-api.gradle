@@ -1,7 +1,12 @@
+import groovy.xml.XmlUtil
 import org.gradle.build.*
 
 // GradleConnector entry point requires Java 5
 sourceCompatibility = javaVersion.java9Compatible ? 1.6 : 1.5
+
+configurations {
+    testPublishRuntime
+}
 
 dependencies {
     compile project(':core')
@@ -31,10 +36,6 @@ useTestFixtures(project: ":logging")
 useTestFixtures(project: ':dependencyManagement')
 useTestFixtures(project: ':ide')
 
-integTestTasks.all {
-    dependsOn(publishLocalArchives, ':distributions:binZip')
-}
-
 forkingIntegTest {
     if (isCiServer) {
         maxParallelForks = Math.min(2, rootProject.maxParallelForks)
@@ -50,8 +51,11 @@ daemonIntegTest {
 }
 
 task shadedJar(type: ShadedJar) {
+    dependsOn project(':versionInfo').jar
     ext.outputDir = file("$buildDir/shaded-jar")
-    sourceFiles = jar.inputs.files + files {(configurations.runtime - configurations.publishCompile).collect { zipTree(it) } }
+    sourceFiles = jar.inputs.files +
+        files { project(':versionInfo').jar.outputs.files.collect { zipTree(it) } } +
+        files { (configurations.runtime - configurations.publishCompile).collect { zipTree(it) } }
     analysisFile = file("$outputDir/analysis.txt")
     classesDir = file("$outputDir/classes")
     jarFile = file("$outputDir/gradle-tooling-api-shaded-${versionBase}.jar")
@@ -70,10 +74,6 @@ sourceJar {
     }
 }
 
-artifacts {
-    publishRuntime file: shadedJar.jarFile, name: archivesBaseName, type: 'jar', builtBy: shadedJar
-}
-
 eclipse {
     classpath {
         file.whenMerged { classpath ->
@@ -82,6 +82,44 @@ eclipse {
             classpath.entries.removeAll { it.path.contains('src/integTest/groovy') }
         }
     }
+}
+
+ext.fixedVersionNumber = { project(':versionInfo').createTestBuildReceipt.versionNumber }
+
+task generateFixedVersionPom {
+    dependsOn generatePom
+    ext.fixedVersionPomFile = new File(temporaryDir, 'pom.xml')
+    doLast {
+        def xml = new XmlParser().parse(generatePom.pomFile)
+        xml.version[0].value = fixedVersionNumber()
+        fixedVersionPomFile.parentFile.mkdirs()
+        fixedVersionPomFile.createNewFile()
+        fixedVersionPomFile.text = XmlUtil.serialize(xml)
+    }
+}
+
+artifacts {
+    publishRuntime file: shadedJar.jarFile, name: archivesBaseName, type: 'jar', builtBy: shadedJar
+
+    testPublishRuntime jar
+    testPublishRuntime sourceJar
+    testPublishRuntime file: shadedJar.jarFile, name: archivesBaseName, type: 'jar', builtBy: shadedJar
+    testPublishRuntime new org.gradle.api.internal.artifacts.publish.DefaultPublishArtifact(archivesBaseName, 'pom', 'pom', null, new Date(), generateFixedVersionPom.fixedVersionPomFile, generateFixedVersionPom)
+}
+
+task publishLocalArchives(type: Upload) {
+    configuration = configurations.testPublishRuntime
+    dependsOn generateFixedVersionPom
+    uploadDescriptor = false
+    repositories {
+        ivy {
+            artifactPattern "${rootProject.file('build/repo')}/${project.group.replaceAll('\\.', '/')}/${archivesBaseName}/${fixedVersionNumber()}/[artifact]-${fixedVersionNumber()}(-[classifier]).[ext]"
+        }
+    }
+}
+
+integTestTasks.all {
+    dependsOn(publishLocalArchives, ':distributions:binZip')
 }
 
 verifyTestFilesCleanup.errorWhenNotEmpty = false
