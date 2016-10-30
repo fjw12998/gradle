@@ -49,6 +49,7 @@ distributionTestTasks.all { DistributionTest task ->
                 systemProperties['integTest.gradleUserHomeDir'] = rootProject.file('intTestHomeDir').absolutePath
                 systemProperties['integTest.libsRepo'] = rootProject.file('build/repo')
                 systemProperties['integTest.toolingApiShadedJarDir'] = rootProject.project(':toolingApi').testToolingApiJar.destinationDir
+                systemProperties['integTest.distZipVersion'] = version
 
                 // If the projects int test need the distributions, they should add:
                 // inputs.files rootProject.buildDists

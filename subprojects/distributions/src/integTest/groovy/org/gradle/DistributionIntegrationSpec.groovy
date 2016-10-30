@@ -33,7 +33,7 @@ abstract class DistributionIntegrationSpec extends AbstractIntegrationSpec {
 
     @Rule public final PreconditionVerifier preconditionVerifier = new PreconditionVerifier()
 
-    @Shared String version = GradleVersion.current().version
+    @Shared String version = buildContext.distZipVersion.version
     @Shared String baseVersion = GradleVersion.current().baseVersion.version
 
     abstract String getDistributionLabel()
