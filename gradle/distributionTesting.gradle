@@ -21,7 +21,7 @@ ext.distributionTestTasks = tasks.withType(DistributionTest)
 
 distributionTestTasks.all { DistributionTest task ->
     dependsOn ':intTestImage'
-    dependsOn ':toolingApi:shadedJar'
+    dependsOn ':toolingApi:testToolingApiJar'
     dependsOn ':cleanUpCaches'
     finalizedBy ':cleanUpDaemons'
     shouldRunAfter 'test'
@@ -48,7 +48,7 @@ distributionTestTasks.all { DistributionTest task ->
                 systemProperties['integTest.gradleHomeDir'] = rootProject.intTestImage.destinationDir.absolutePath
                 systemProperties['integTest.gradleUserHomeDir'] = rootProject.file('intTestHomeDir').absolutePath
                 systemProperties['integTest.libsRepo'] = rootProject.file('build/repo')
-                systemProperties['integTest.toolingApiShadedJarDir'] = rootProject.project(':toolingApi').shadedJar.outputDir
+                systemProperties['integTest.toolingApiShadedJarDir'] = rootProject.project(':toolingApi').testToolingApiJar.destinationDir
 
                 // If the projects int test need the distributions, they should add:
                 // inputs.files rootProject.buildDists

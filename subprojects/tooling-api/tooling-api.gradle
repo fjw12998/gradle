@@ -50,11 +50,9 @@ daemonIntegTest {
     enabled = false //tooling integ tests use daemon anyway, don't rerun
 }
 
-task shadedJar(type: ShadedJar) {
-    dependsOn project(':versionInfo').jar
+task shadedJarWithoutVersion(type: ShadedJar) {
     ext.outputDir = file("$buildDir/shaded-jar")
     sourceFiles = jar.inputs.files +
-        files { project(':versionInfo').jar.outputs.files.collect { zipTree(it) } } +
         files { (configurations.runtime - configurations.publishCompile).collect { zipTree(it) } }
     analysisFile = file("$outputDir/analysis.txt")
     classesDir = file("$outputDir/classes")
@@ -63,6 +61,30 @@ task shadedJar(type: ShadedJar) {
     unshadedPackages = ["org.gradle", "org.slf4j"]
     ignorePackages = ["org.gradle.tooling.provider.model"]
     shadowPackage = "org.gradle.internal.impldep"
+}
+
+task toolingApiJar(type: Zip) {
+    dependsOn shadedJarWithoutVersion, project(':versionInfo').createBuildReceipt
+    from zipTree(shadedJarWithoutVersion.jarFile)
+    from(project(':versionInfo').createTestBuildReceipt) {
+        into '/org/gradle'
+    }
+    baseName = 'gradle-tooling-api-shaded'
+    destinationDir file("$temporaryDir/")
+    extension 'jar'
+    version version
+}
+
+task testToolingApiJar(type: Zip) {
+    dependsOn shadedJarWithoutVersion, project(':versionInfo').createTestBuildReceipt
+    from zipTree(shadedJarWithoutVersion.jarFile)
+    from(project(':versionInfo').createTestBuildReceipt) {
+        into '/org/gradle'
+    }
+    baseName = 'gradle-tooling-api-shaded'
+    destinationDir file("$temporaryDir/")
+    extension 'jar'
+    version testedVersion
 }
 
 apply from: 'buildship.gradle'
@@ -84,17 +106,15 @@ eclipse {
     }
 }
 
-ext.fixedVersionNumber = { project(':versionInfo').createTestBuildReceipt.versionNumber }
-
 task generateFixedVersionPom {
     dependsOn generatePom
     ext.fixedVersionPomFile = new File(temporaryDir, 'pom.xml')
     outputs.files(fixedVersionPomFile)
     inputs.file { generatePom.pomFile }
-    inputs.property("fixedVersionNumber", { fixedVersionNumber() })
+    inputs.property("testedVersion", { testedVersion })
     doLast {
         def xml = new XmlParser().parse(generatePom.pomFile)
-        xml.version[0].value = fixedVersionNumber()
+        xml.version[0].value = testedVersion
         fixedVersionPomFile.parentFile.mkdirs()
         fixedVersionPomFile.createNewFile()
         fixedVersionPomFile.text = XmlUtil.serialize(xml)
@@ -102,11 +122,11 @@ task generateFixedVersionPom {
 }
 
 artifacts {
-    publishRuntime file: shadedJar.jarFile, name: archivesBaseName, type: 'jar', builtBy: shadedJar
+    publishRuntime file: toolingApiJar.archivePath, name: archivesBaseName, type: 'jar', builtBy: toolingApiJar
 
     testPublishRuntime jar
     testPublishRuntime sourceJar
-    testPublishRuntime file: shadedJar.jarFile, name: archivesBaseName, type: 'jar', builtBy: shadedJar
+    testPublishRuntime file: testToolingApiJar.archivePath, name: archivesBaseName, type: 'jar', builtBy: testToolingApiJar
     testPublishRuntime new org.gradle.api.internal.artifacts.publish.DefaultPublishArtifact(archivesBaseName, 'pom', 'pom', null, new Date(), generateFixedVersionPom.fixedVersionPomFile, generateFixedVersionPom)
 }
 
@@ -116,7 +136,7 @@ task publishLocalArchives(type: Upload) {
     uploadDescriptor = false
     repositories {
         ivy {
-            artifactPattern "${rootProject.file('build/repo')}/${project.group.replaceAll('\\.', '/')}/${archivesBaseName}/${fixedVersionNumber()}/[artifact]-${fixedVersionNumber()}(-[classifier]).[ext]"
+            artifactPattern "${rootProject.file('build/repo')}/${project.group.replaceAll('\\.', '/')}/${archivesBaseName}/${testedVersion}/[artifact]-${testedVersion}(-[classifier]).[ext]"
         }
     }
 }
