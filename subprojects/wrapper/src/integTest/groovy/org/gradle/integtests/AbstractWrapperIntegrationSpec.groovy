@@ -20,13 +20,14 @@ import org.apache.commons.io.FilenameUtils
 import org.gradle.integtests.fixtures.AbstractIntegrationSpec
 import org.gradle.integtests.fixtures.executer.GradleExecuter
 import org.gradle.integtests.fixtures.executer.InProcessGradleExecuter
+import org.gradle.integtests.fixtures.executer.IntegrationTestBuildContext
 import org.gradle.test.fixtures.file.TestFile
 
 class AbstractWrapperIntegrationSpec extends AbstractIntegrationSpec {
     void installationIn(TestFile userHomeDir) {
         def distDir = userHomeDir.file("wrapper/dists/${FilenameUtils.getBaseName(distribution.binDistribution.absolutePath)}").assertIsDir()
         assert distDir.listFiles().length == 1
-        distDir.listFiles()[0].file("gradle-${distribution.version.version}").assertIsDir()
+        distDir.listFiles()[0].file("gradle-${new IntegrationTestBuildContext().distZipVersion.version}").assertIsDir()
     }
 
     void prepareWrapper(URI distributionUri = distribution.binDistribution.toURI()) {

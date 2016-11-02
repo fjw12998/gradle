@@ -45,7 +45,7 @@ evaluationDependsOn ":docs"
 ext {
     zipRootFolder = "gradle-$version"
 
-    binDistImage = { Closure runtimeConf = {} ->
+    binDistImage = { Closure runtimeConf = null ->
         copySpec {
             from("$rootDir/LICENSE")
             from('src/toplevel') {
@@ -61,7 +61,11 @@ ext {
                 fileMode = 0755
             }
             into('lib') {
-                from(rootProject.configurations.runtime, runtimeConf)
+                from rootProject.configurations.runtime
+                if (!runtimeConf) {
+                    from(project(':versionInfo').jar)
+                }
+
                 into('plugins') {
                     from rootProject.configurations.gradlePlugins - rootProject.configurations.runtime
                 }

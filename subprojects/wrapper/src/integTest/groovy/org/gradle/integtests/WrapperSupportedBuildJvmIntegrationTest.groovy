@@ -16,7 +16,7 @@
 
 package org.gradle.integtests
 import org.gradle.integtests.fixtures.AvailableJavaHomes
-import org.gradle.util.GradleVersion
+import org.gradle.integtests.fixtures.executer.IntegrationTestBuildContext
 import org.gradle.util.Requires
 import spock.lang.Unroll
 
@@ -30,7 +30,7 @@ class WrapperSupportedBuildJvmIntegrationTest extends AbstractWrapperIntegration
 
         expect:
         def failure = wrapperExecuter.withTasks("help").runWithFailure()
-        failure.assertHasDescription("Gradle ${GradleVersion.current().version} requires Java 7 or later to run. You are currently using Java ${jdk.javaVersion.majorVersion}.")
+        failure.assertHasDescription("Gradle ${new IntegrationTestBuildContext().distZipVersion.version} requires Java 7 or later to run. You are currently using Java ${jdk.javaVersion.majorVersion}.")
 
         where:
         jdk << AvailableJavaHomes.getJdks("1.5", "1.6")
@@ -44,7 +44,7 @@ class WrapperSupportedBuildJvmIntegrationTest extends AbstractWrapperIntegration
 
         expect:
         def failure = wrapperExecuter.withTasks("help").runWithFailure()
-        failure.assertHasDescription("Gradle ${GradleVersion.current().version} requires Java 7 or later to run. Your build is currently configured to use Java ${jdk.javaVersion.majorVersion}.")
+        failure.assertHasDescription("Gradle ${new IntegrationTestBuildContext().distZipVersion.version} requires Java 7 or later to run. Your build is currently configured to use Java ${jdk.javaVersion.majorVersion}.")
 
         where:
         jdk << AvailableJavaHomes.getJdks("1.5", "1.6")

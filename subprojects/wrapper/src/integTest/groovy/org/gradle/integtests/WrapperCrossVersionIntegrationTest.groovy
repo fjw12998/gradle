@@ -18,6 +18,7 @@ package org.gradle.integtests
 import org.gradle.integtests.fixtures.AvailableJavaHomes
 import org.gradle.integtests.fixtures.CrossVersionIntegrationSpec
 import org.gradle.integtests.fixtures.daemon.DaemonLogsAnalyzer
+import org.gradle.integtests.fixtures.executer.AbstractUnderDevelopmentGradleDistribution
 import org.gradle.integtests.fixtures.executer.GradleDistribution
 import org.gradle.integtests.fixtures.executer.GradleExecuter
 import org.gradle.integtests.fixtures.executer.IntegrationTestBuildContext
@@ -61,7 +62,7 @@ class WrapperCrossVersionIntegrationTest extends CrossVersionIntegrationSpec {
 
         then:
         def result = executor.usingExecutable('gradlew').withArgument('help').runWithFailure()
-        result.assertHasDescription("Gradle ${GradleVersion.current().version} requires Java 7 or later to run. You are currently using Java ${jdk.javaVersion.majorVersion}.")
+        result.assertHasDescription("Gradle ${binDistVersion.version} requires Java 7 or later to run. You are currently using Java ${jdk.javaVersion.majorVersion}.")
 
         where:
         jdk << AvailableJavaHomes.getJdks("1.5", "1.6")
@@ -76,7 +77,7 @@ class WrapperCrossVersionIntegrationTest extends CrossVersionIntegrationSpec {
 
         then:
         def result = executor.usingExecutable('gradlew').withArgument('help').runWithFailure()
-        result.assertHasDescription("Gradle ${GradleVersion.current().version} requires Java 7 or later to run. Your build is currently configured to use Java ${jdk.javaVersion.majorVersion}.")
+        result.assertHasDescription("Gradle ${binDistVersion.version} requires Java 7 or later to run. Your build is currently configured to use Java ${jdk.javaVersion.majorVersion}.")
 
         where:
         jdk << AvailableJavaHomes.getJdks("1.5", "1.6")
@@ -136,9 +137,16 @@ task hello {
     void checkWrapperWorksWith(GradleExecuter executer, GradleDistribution executionVersion) {
         def result = executer.usingExecutable('gradlew').withTasks('hello').run()
 
-        assert result.output.contains("hello from $executionVersion.version.version")
+        GradleVersion version =  executionVersion instanceof AbstractUnderDevelopmentGradleDistribution ?
+            binDistVersion : executionVersion.version
+
+        assert result.output.contains("hello from $version.version")
         assert result.output.contains("using distribution at ${executer.gradleUserHomeDir.file("wrapper/dists")}")
         assert result.output.contains("using Gradle user home at $executer.gradleUserHomeDir")
+    }
+
+    private GradleVersion getBinDistVersion() {
+        return new IntegrationTestBuildContext().distZipVersion
     }
 
     static void cleanupDaemons(GradleExecuter executer, GradleDistribution executionVersion) {
