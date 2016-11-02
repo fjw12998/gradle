@@ -29,7 +29,7 @@ if (useIncomingDistributions) {
     }
 
     // Compensate for the top level dir in the zip
-    def unpackedPath = "$unpackIncomingAllDistribution.destinationDir/${incomingAllDistribution.name - "-all.zip"}"
+    def unpackedPath = "$unpackIncomingAllDistribution.destinationDir/gradle-${incomingDistributionsBuildReceipt.versionNumber}"
 
     intTestImage {
         dependsOn unpackIncomingAllDistribution
