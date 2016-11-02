@@ -26,9 +26,14 @@ dependencies {
     integTestRuntime rootProject.configurations.testRuntime.allDependencies
 }
 
-task wrapperBuildReceiptResource(type: Copy) {
-    into generatedTestResourcesDir
-    from project(':versionInfo').createTestBuildReceipt
+task wrapperBuildReceiptResource() {
+    ext.destinationFile = file("${generatedTestResourcesDir}/build-receipt.properties")
+    outputs.file(destinationFile)
+    inputs.property("versionNumber") { testedVersion }
+    doLast {
+        destinationFile.parentFile.mkdirs()
+        destinationFile.text = "versionNumber=${testedVersion}"
+    }
 }
 sourceSets.test.output.dir generatedTestResourcesDir, builtBy: wrapperBuildReceiptResource
 
