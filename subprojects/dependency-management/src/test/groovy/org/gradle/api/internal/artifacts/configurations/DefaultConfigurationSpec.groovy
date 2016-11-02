@@ -1434,7 +1434,7 @@ All Artifacts:
 
     private DefaultConfiguration conf(String confName = "conf", String path = ":conf") {
         new DefaultConfiguration(path, confName, configurationsProvider, resolver, listenerManager, metaDataProvider,
-            resolutionStrategy, projectAccessListener, projectFinder, metaDataBuilder, TestFiles.fileCollectionFactory(), componentIdentifierFactory, attributeMatchingStrategy)
+            resolutionStrategy, projectAccessListener, projectFinder, metaDataBuilder, TestFiles.fileCollectionFactory(), componentIdentifierFactory)
     }
 
     private DefaultPublishArtifact artifact(String name) {
