@@ -110,11 +110,12 @@ task createBuildReceipt(type: org.gradle.build.BuildReceipt, dependsOn: configur
 }
 
 task createTestBuildReceipt(type: org.gradle.build.BuildReceipt) {
-    receiptFile = file("$buildDir/test-version-info-resources/${buildReceiptFileName}")
+    receiptFile = file("$generatedTestResourcesDir/org/gradle/${buildReceiptFileName}")
     versionNumber = rootProject.testedVersion
     versionBase = rootProject.versionBase
     snapshot = rootProject.isSnapshot
 }
+sourceSets.test.output.dir generatedTestResourcesDir, builtBy: createTestBuildReceipt
 
 ext.buildReceiptPackage = '/org/gradle/'
 
@@ -136,4 +137,21 @@ task testVersionInfoJar(type: Jar) {
 
 artifacts {
     testVersionInfo testVersionInfoJar
+}
+
+idea {
+    module {
+        iml {
+            whenMerged { module ->
+                def testBuildReceipt = module.dependencies.find {
+                    it instanceof org.gradle.plugins.ide.idea.model.ModuleLibrary &&
+                        it.classes.any {
+                            it.url.contains('/build/generated-resources/test')
+                        }
+                }
+                // We need to have the test build receipt available for all tests. For IDEA we add it to the runtime classpath
+                testBuildReceipt.scope = 'RUNTIME'
+            }
+        }
+    }
 }
