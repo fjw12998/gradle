@@ -36,18 +36,12 @@ if (useIncomingDistributions) {
         from(unpackedPath) {
             exclude "lib/gradle-version-info*.jar"
         }
-        into("lib") {
-            from { project(':versionInfo').testVersionInfoJar }
-        }
+        with project(":distributions").testVersionInfo
     }
 } else {
     intTestImage {
-        with project(":distributions").binDistImage {
-            exclude "gradle-version-info*.jar"
-        }
-        into("lib") {
-            from { project(':versionInfo').testVersionInfoJar }
-        }
+        with project(":distributions").binDistImage
+        with project(":distributions").testVersionInfo
         into "samples", {
             from { project(":docs").outputs.samples }
         }
