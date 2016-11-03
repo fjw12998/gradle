@@ -142,7 +142,7 @@ task publishLocalArchives(type: Upload) {
 }
 
 integTestTasks.all {
-    dependsOn(publishLocalArchives, ':distributions:binZip')
+    dependsOn(publishLocalArchives, ':distributions:testBinZip')
 }
 
 verifyTestFilesCleanup.errorWhenNotEmpty = false

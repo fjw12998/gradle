@@ -45,6 +45,7 @@ evaluationDependsOn ':versionInfo'
 
 ext {
     zipRootFolder = "gradle-$version"
+    testZipRootFolder = "gradle-$testedVersion"
 
     versionInfo = copySpec {
         into('lib') {
@@ -110,6 +111,14 @@ task binZip(type: Zip) {
     into(zipRootFolder) {
         with binDistImage
         with versionInfo
+    }
+}
+
+task testBinZip(type: Zip) {
+    classifier = 'test-bin'
+    into(testZipRootFolder) {
+        with binDistImage
+        with testVersionInfo
     }
 }
 
